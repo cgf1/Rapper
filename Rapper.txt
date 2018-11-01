@@ -1,0 +1,12 @@
+## APIVersion: 100025
+## Description: Rapper
+## Title: Rapper
+## Version: 1.0
+## Author: Valandil
+## SavedVariables: RapperSaved
+## DependsOn: LibAddonMenu-2.0
+## OptionalDependsOn: TOM
+## OptionalDependsOn: pChat
+
+Rapper.lua
+Bindings.xml

@@ -1,0 +1,13 @@
+<Bindings>
+    <Layer name="SI_KEYBINDINGS_CATEGORY_GENERAL">
+	<Category name="Rapper">
+	    <Action name="RAPPER_HOTKEY">
+		<Down>
+                    Rapper.KeyDown()
+		</Down>
+	    </Action>
+	</Category>
+    </Layer>
+</Bindings>
+
+
