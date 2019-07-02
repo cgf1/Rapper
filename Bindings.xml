@@ -3,7 +3,7 @@
 	<Category name="Rapper">
 	    <Action name="RAPPER_HOTKEY">
 		<Down>
-                    Rapper.KeyDown()
+		    Rapper.KeyDown()
 		</Down>
 	    </Action>
 	</Category>
