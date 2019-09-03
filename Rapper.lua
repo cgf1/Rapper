@@ -25,12 +25,10 @@ local slotn
 
 local rearm
 
-local pinned = false
-
-local orig_df = df
-
 local function emptyfunc()
 end
+
+local dbg = empty_func
 
 local function call(sub, x)
     return function(_, ...) sub(x, ...) end
@@ -40,7 +38,7 @@ local function israpid()
     local aid = GetSlotBoundId(slotn)
     local icon = GetAbilityIcon(aid)
     local israpid = icon:find('ava_002') ~= nil
--- df("------ %s %s", tostring(israpid), tostring(icon));
+-- dbg("------ %s %s", tostring(israpid), tostring(icon));
     return israpid, aid
 end
 
@@ -51,15 +49,15 @@ local function reslot(rapidify)
 	saved.pair[n] = GetSlotBoundId(slotn)
 	SlotSkillAbilityInSlot(6, 1, 2, slotn)
 	aid = saved.pair[n]
-    elseif not pinned and saved.pair[n] then
+    elseif not saved.pinned then
 	aid = saved.pair[n]
 	local skillType, skillLineIndex, skillIndex = GetSpecificSkillAbilityKeysByAbilityId(aid)
 	SlotSkillAbilityInSlot(skillType, skillLineIndex, skillIndex, slotn)
     end
     if not aid then
-	df("reslot: want rapid = %s, called with no saved aid", tostring(rapidify))
+	dbg("reslot: want rapid = %s, called with no saved aid", tostring(rapidify))
     else
-	df("reslot: want rapid = %s, cur %s, saved %s", tostring(rapidify), GetAbilityName(GetSlotBoundId(slotn)), GetAbilityName(aid))
+	dbg("reslot: want rapid = %s, cur %s, saved %s", tostring(rapidify), GetAbilityName(GetSlotBoundId(slotn)), GetAbilityName(aid))
     end
     return
 end
@@ -68,17 +66,17 @@ local function onmount(x, mounted)
     local rapid, aid = israpid()
     rearm('onmount', false)
     if mounted and rapid then
-	df("onmount(%s): returning because already mounted and rapid", x)
+	dbg("onmount(%s): returning because already mounted and rapid", x)
 	return
     end
     local r
-    df("onmount(%s): calling reslot(%s)", x, tostring(mounted))
+    dbg("onmount(%s): calling reslot(%s)", x, tostring(mounted))
     reslot(mounted)
 end
 
 local armed = false
 rearm = function(x, doit)
-    df("rearm: %s: %s", x, tostring(doit))
+    dbg("rearm: %s: %s", x, tostring(doit))
     if armed then
 	EVENT_MANAGER:UnregisterForUpdate(nameCL)
 	armed = false
@@ -91,7 +89,7 @@ end
 
 local function ability_used(x, slot)
     local n = GetActiveWeaponPairInfo()
--- d(string.format("wp %d, mounted %s, slot %d, slotn %d, saved.pair[n] %s", n, tostring(IsMounted()), slot, slotn, tostring(saved.pair[n])))
+    dbg("ability_used: wp %d, mounted %s, slot %d, slotn %d, saved.pair[n] %s", n, tostring(IsMounted()), slot, slotn, tostring(saved.pair[n]))
     if slot == slotn and IsMounted() and israpid() then
 	reslot(false)
 	rearm('ability_used', true)
@@ -99,31 +97,43 @@ local function ability_used(x, slot)
 end
 
 local function onslot(x, slot)
-    local n = GetActiveWeaponPairInfo()
-    if not saved.pair[n] or IsMounted() or pinned then
-	return
-    end
-    if israpid() then
-	reslot(false)	-- turn it off
-    elseif saved.pair[n] then
-	saved.pair[n] = nil
+    local rapid = israpid()
+    if IsMounted() then
+        if slot == slotn and not rapid then
+            local n = GetActiveWeaponPairInfo()
+            saved.pair[n] = GetSlotBoundId(slotn)
+        end
+    elseif not saved.pinned and rapid then
+        reslot(false)	-- turn it off
+        dbg("tried to turn off rapid")
     end
 end
 
 local function keydown()
-    pinned = not israpid()
-    df("keydown: pinning = %s", tostring(pinned))
-    onmount('key', pinned)
+    saved.pinned = not saved.pinned
+    dbg("keydown: pinning = %s", tostring(saved.pinned))
+    onmount('key', saved.pinned)
 end
 
 local function onloaded(_, addon_name)
     if addon_name ~= name then
 	return
     end
-    df = emptyfunc
+    dbg = emptyfunc
     KeyDown = keydown
     saved = ZO_SavedVars:NewAccountWide(name .. 'Saved', settings_version, nil, saved)
     slotn = saved.slot + 2
+    if saved.pinned == nil then
+        saved.pinned = false
+    end
+    if saved.debug == nil then
+        saved.debug = false
+    end
+    if saved.debug then
+        dbg = df
+    else
+        dbg = emptyfunc
+    end
     EVENT_MANAGER:UnregisterForEvent(name, EVENT_ADD_ON_LOADED)
     EVENT_MANAGER:RegisterForEvent(name, EVENT_MOUNTED_STATE_CHANGED, call(onmount, 'event'))
     EVENT_MANAGER:RegisterForEvent(name, EVENT_ACTIVE_WEAPON_PAIR_CHANGED, call(onslot, 'weapon switched'))
@@ -163,11 +173,13 @@ local function onloaded(_, addon_name)
 	if not n or n == '' then
 	    -- nothing to do
 	elseif n == 'true' or n == 'on' then
-	    df = orig_df
+	    dbg = df
+            saved.debug = true
 	else
-	    df = emptyfunc
+	    dbg = emptyfunc
+            saved.debug = false
 	end
-	d("rapper debugging: " .. tostring(df == orig_df))
+	d("rapper debugging: " .. tostring(dbg == df))
     end
 end
 
